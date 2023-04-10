@@ -2,23 +2,23 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
-from pathlib import Path
 import pathlib
 import sys
 import textwrap
 from collections import ChainMap
+from pathlib import Path
 
 from lib4sbom.data.file import SBOMFile
 from lib4sbom.data.package import SBOMPackage
 from lib4sbom.data.relationship import SBOMRelationship
 from lib4sbom.generator import SBOMGenerator
-from lib4sbom.sbom import SBOM
-from lib4sbom.output import SBOMOutput
 from lib4sbom.parser import SBOMParser
+from lib4sbom.sbom import SBOM
 
 from sbommerge.version import VERSION
 
 # CLI processing
+
 
 def main(argv=None):
 
@@ -57,6 +57,13 @@ def main(argv=None):
         help="specify format of generated sbom (default: tag)",
     )
     output_group.add_argument(
+        "--sbom-type",
+        action="store",
+        default="spdx",
+        choices=["spdx", "cyclonedx"],
+        help="specify type of sbom to merge (default: spdx)",
+    )
+    output_group.add_argument(
         "-o",
         "--output-file",
         action="store",
@@ -72,6 +79,7 @@ def main(argv=None):
         "output_file": "",
         "sbom": "auto",
         "format": "tag",
+        "sbom_type": "spdx",
         "debug": False,
     }
     raw_args = parser.parse_args(argv[1:])
@@ -79,8 +87,7 @@ def main(argv=None):
     args = ChainMap(args, defaults)
 
     # Validate CLI parameters
-    
-    if args['FILE1'] != args['FILE2']:
+    if args["FILE1"] != args["FILE2"]:
         # Check both files exist
         file_found = True
         if not pathlib.Path(args["FILE1"]).exists():
@@ -93,7 +100,7 @@ def main(argv=None):
             return -1
     else:
         # Same filename specified
-        print(f"Must specify different filenames")
+        print("Must specify different filenames.")
         return -1
 
     parser = SBOMParser(args["sbom"])
@@ -110,20 +117,22 @@ def main(argv=None):
     packages2 = parser.get_packages()
     relationship2 = parser.get_relationships()
     file2_type = parser.get_type()
-    
     if args["debug"]:
-        print (f'File {args["FILE1"]} - {file1_type}')
-        print (f'Files: {files1}')
-        print (f'Packages: {packages1}')
-        print (f'Relationships {relationship1}')
-        print (f'File {args["FILE2"]} - {file2_type}')
-        print (f'Files: {files2}')
-        print (f'Packages: {packages2}')
-        print (f'Relationships {relationship2}')
+        print(f'File {args["FILE1"]} - {file1_type}')
+        print(f"Files: {files1}")
+        print(f"Packages: {packages1}")
+        print(f"Relationships {relationship1}")
+        print(f'File {args["FILE2"]} - {file2_type}')
+        print(f"Files: {files2}")
+        print(f"Packages: {packages2}")
+        print(f"Relationships {relationship2}")
 
-    bom_format = "cyclonedx" if file1_type == file2_type == "cyclonedx" else "spdx"
+    bom_format = args["sbom_type"]
+    # bom_format = "cyclonedx" if file1_type == file2_type == "cyclonedx" else "spdx"
     # Ensure format is aligned with type of SBOM
     sbom_format = args["format"]
+    if bom_format == "cyclonedx":
+        sbom_format = "json"
 
     # Keep count of differences
     updated_info = 0
@@ -161,7 +170,7 @@ def main(argv=None):
                             sbom_file.set_value(param, p1)
                             additional_info += 1
                     for param in file2:
-                        if param not in file1:
+                        if param not in file:
                             if args["debug"]:
                                 print(param, "----", file2[param], "NEW")
                             sbom_file.set_value(param, file2[param])
@@ -197,19 +206,19 @@ def main(argv=None):
     sbom_package.set_name(root_package)
     sbom_package.set_type("application")
     sbom_package.set_filesanalysis(False)
-    #sbom_package.set_downloadlocation(sbom_root)
+    # sbom_package.set_downloadlocation(sbom_root)
     license = "NOASSERTION"
     sbom_package.set_licensedeclared(license)
     sbom_package.set_licenseconcluded(license)
     sbom_package.set_supplier("UNKNOWN", "NOASSERTION")
     # Store package data
     packages[
-            (sbom_package.get_name(), sbom_package.get_value("version"))
+        (sbom_package.get_name(), sbom_package.get_value("version"))
     ] = sbom_package.get_package()
     sbom_relationship.initialise()
     sbom_relationship.set_relationship("APPLICATION", "DESCRIBES", root_package)
+    # sbom_relationship.set_relationship(parent, "DESCRIBES", root_package)
     relationships.append(sbom_relationship.get_relationship())
-    
     for package in packages1:
         sbom_package.initialise()
         if package in packages2:
@@ -253,17 +262,17 @@ def main(argv=None):
                                 sbom_package.set_value(param, package2[param])
         else:
             if args["debug"]:
-                print(package['name'], "UNIQUE 1")
+                print(package["name"], "UNIQUE 12")
             sbom_package.copy_package(package)
             merged_info += 1
         packages[
-                (sbom_package.get_name(), sbom_package.get_value("version"))
-            ] = sbom_package.get_package()
+            (sbom_package.get_name(), sbom_package.get_value("version"))
+        ] = sbom_package.get_package()
     for package in packages2:
         sbom_package.initialise()
         if package not in packages1:
             if args["debug"]:
-                print(package['name'], "UNIQUE 2")
+                print(package["name"], "UNIQUE 2")
             sbom_package.copy_package(package)
             merged_info += 1
             packages[
@@ -273,12 +282,16 @@ def main(argv=None):
     for r in relationship1:
         source = None
         target = None
+        source_type = "package"
+        target_type = "package"
         # Could be file or package
         for f in files1:
             if f["name"] == r["source"]:
                 source = f["name"]
+                source_type = "file"
             elif f["name"] == r["target"]:
                 target = f["name"]
+                target_type = "file"
         for p in packages1:
             if p["name"] == r["source"]:
                 source = p["name"]
@@ -287,17 +300,23 @@ def main(argv=None):
         if source is not None and target is not None:
             sbom_relationship.initialise()
             sbom_relationship.set_relationship(source, r["type"], target)
+            sbom_relationship.set_source_type(source_type)
+            sbom_relationship.set_target_type(target_type)
             relationships.append(sbom_relationship.get_relationship())
-            
+
     for r in relationship2:
         source = None
         target = None
+        source_type = "package"
+        target_type = "package"
         # Could be file or package
         for f in files2:
             if f["name"] == r["source"]:
                 source = f["name"]
+                source_type = "file"
             elif f["name"] == r["target"]:
                 target = f["name"]
+                target_type = "file"
         for p in packages2:
             if p["name"] == r["source"]:
                 source = p["name"]
@@ -306,6 +325,8 @@ def main(argv=None):
         if source is not None and target is not None:
             sbom_relationship.initialise()
             sbom_relationship.set_relationship(source, r["type"], target)
+            sbom_relationship.set_source_type(source_type)
+            sbom_relationship.set_target_type(target_type)
             relationships.append(sbom_relationship.get_relationship())
 
     # Finally add relationships to overall document
@@ -313,7 +334,6 @@ def main(argv=None):
         sbom_relationship.initialise()
         sbom_relationship.set_relationship(root_package, "CONTAINS", p[0])
         relationships.append(sbom_relationship.get_relationship())
-    
     if args["debug"]:
         print("SBOM type", bom_format)
         print("SBOM format", sbom_format)
@@ -342,7 +362,7 @@ def main(argv=None):
     merge_sbom.add_packages(packages)
     merge_sbom.add_relationships(relationships)
     if args["debug"]:
-        print (merge_sbom.get_sbom())    
+        print(merge_sbom.get_sbom())
 
     sbom_gen = SBOMGenerator(
         sbom_type=bom_format, format=sbom_format, application=app_name, version=VERSION
@@ -358,6 +378,7 @@ def main(argv=None):
         return 1
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
