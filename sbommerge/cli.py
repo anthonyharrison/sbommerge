@@ -202,7 +202,7 @@ def main(argv=None):
     # Create root package
     sbom_package.initialise()
     root_package = f'MERGETOOL-{Path(args["FILE1"]).name.replace(".","-")}-{Path(args["FILE2"]).name.replace(".","-")}'
-    parent = f"SBOM_{root_package}"
+    parent = f"SBOM-{root_package}"
     sbom_package.set_name(root_package)
     sbom_package.set_type("application")
     sbom_package.set_filesanalysis(False)
@@ -216,8 +216,7 @@ def main(argv=None):
         (sbom_package.get_name(), sbom_package.get_value("version"))
     ] = sbom_package.get_package()
     sbom_relationship.initialise()
-    sbom_relationship.set_relationship("APPLICATION", "DESCRIBES", root_package)
-    # sbom_relationship.set_relationship(parent, "DESCRIBES", root_package)
+    sbom_relationship.set_relationship(parent, "DESCRIBES", root_package)
     relationships.append(sbom_relationship.get_relationship())
     for package in packages1:
         sbom_package.initialise()
@@ -368,7 +367,7 @@ def main(argv=None):
         sbom_type=bom_format, format=sbom_format, application=app_name, version=VERSION
     )
     sbom_gen.generate(
-        project_name="APPLICATION",
+        project_name=parent,
         sbom_data=merge_sbom.get_sbom(),
         filename=args["output_file"],
     )
