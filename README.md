@@ -57,6 +57,7 @@ automatically detected based on the extension of the file name.
 | SPDX      | 2.3       | .spdx.yml      | YAML          |
 | SPDX      | 2.3       | .spdx.yaml     | YAML          |
 | CycloneDX | 1.4       | .json          | JSON          |
+| CycloneDX | 1.5       | .json          | JSON          |
 
 Details of the formats for each of the supported SBOM formats are available for
 [SPDX](https://spdx.dev/) and [CycloneDX](https://cyclonedx.org/).
