@@ -224,7 +224,7 @@ def main(argv=None):
             # If package version differ, don't merge
             for package2 in packages2:
                 if package2["name"] == package["name"]:
-                    if package["version"] != package2["version"]:
+                    if "version" in package.keys() and "version" in package2.keys() and package["version"] != package2["version"]:
                         print(
                             f"[ERROR] Version mismatch for"
                             f" {package['name']}"
