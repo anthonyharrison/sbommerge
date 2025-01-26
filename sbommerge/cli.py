@@ -348,11 +348,11 @@ def main(argv=None):
         print("SBOM File2 - packages", len(packages2))
         print("SBOM File2 - relationships", len(relationship2))
 
-    print("\nSummary\n-------")
-    print(f"No change:  {identical_info}")
-    print(f"Updated:    {updated_info}")
-    print(f"New:        {additional_info}")
-    print(f"Merged:     {merged_info}\n")
+    print("\nSummary\n-------", file=sys.stderr)
+    print(f"No change:  {identical_info}", file=sys.stderr)
+    print(f"Updated:    {updated_info}", file=sys.stderr)
+    print(f"New:        {additional_info}", file=sys.stderr)
+    print(f"Merged:     {merged_info}\n", file=sys.stderr)
 
     # Generate SBOM file
 
